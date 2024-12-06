@@ -1,3 +1,5 @@
+import { corsHeaders } from '../_shared/cors.ts'
+
 import { Pool } from 'https://deno.land/x/postgres@v0.17.0/mod.ts'
 import { config } from 'https://deno.land/x/dotenv/mod.ts'
 
@@ -18,6 +20,11 @@ const pool = new Pool(
 )
 
 Deno.serve(async (_req) => {
+  // This is needed if you're planning to invoke your function from a browser.
+  if (_req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
     // Parse the query parameter `q`
     const url = new URL(_req.url);
@@ -49,9 +56,7 @@ Deno.serve(async (_req) => {
         // Return the response with the correct content type header
         return new Response(body, {
           status: 200,
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-          },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       } finally {
         // Release the connection back into the pool
@@ -59,10 +64,16 @@ Deno.serve(async (_req) => {
       }
     } catch (err) {
       console.error(err)
-      return new Response(String(err?.message ?? err), { status: 500 })
+      return new Response(String(err?.message ?? err), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      })
     }
   } catch (err) {
     console.error("Unexpected error:", err);
-    return new Response("Internal Server Error", { status: 500 });
+    return new Response("Internal Server Error", { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500 
+    });
   }
 })
